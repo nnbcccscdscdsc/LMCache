@@ -119,8 +119,8 @@ def ttft_stream(
             prompt=prompt,
             temperature=0.0,  # 完全确定性
             stream=True,
-            max_tokens=100,   # 大幅减少最大token数，避免循环
-            stop=["截图", "录制", "转码", "\n\n", "问题：", "文档内容：", "user:", "assistant:"],  # 添加更精确的停止条件
+            max_tokens=512,   # 减少最大token数
+            stop=["\n\n", "问题：", "文档内容：", "user:", "assistant:"],  # 添加合理的停止条件
         )
     first_tok_t: float | None = None
     buf = StringIO()
