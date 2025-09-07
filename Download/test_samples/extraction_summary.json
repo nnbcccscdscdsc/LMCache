@@ -1,0 +1,12 @@
+{
+  "extraction_date": "/home/limingjie/LMJWork/CacheBlend/LMCache/Download",
+  "random_seed": 42,
+  "output_directory": "test_samples",
+  "results": {
+    "2WikiMQA": 200,
+    "Musique": 150,
+    "SAMSum": 200,
+    "MultiNews": 60
+  },
+  "total_samples": 610
+}

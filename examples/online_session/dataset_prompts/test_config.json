@@ -1,0 +1,30 @@
+{
+  "dataset_info": {
+    "name": "complexquestion_2WIKIMQA_1000 (local sample)",
+    "source": "https://huggingface.co/datasets/presencesw/complexquestion_2WIKIMQA_1000",
+    "description": "基于原始数据集的10个复杂问答对，包含多步推理问题",
+    "note": "由于网络问题无法直接下载，创建了基于原始数据内容的本地样本"
+  },
+  "test_config": {
+    "max_prompts": 10,
+    "max_prompt_length": 1500,
+    "model": "facebook/opt-125m",
+    "test_types": [
+      "cold_start",
+      "cached_first",
+      "cached_second"
+    ]
+  },
+  "usage_instructions": {
+    "json_format": "使用 --dataset custom --dataset-file dataset_prompts/complex_qa_prompts.json",
+    "txt_format": "使用 --dataset custom --dataset-file dataset_prompts/complex_qa_prompts.txt",
+    "jsonl_format": "使用 --dataset custom --dataset-file dataset_prompts/complex_qa_prompts.jsonl"
+  },
+  "prompt_examples": [
+    "电影导演国籍比较问题",
+    "导演死亡时间比较问题",
+    "导演出生地查询问题",
+    "导演家庭关系问题",
+    "历史人物关系推理问题"
+  ]
+}
