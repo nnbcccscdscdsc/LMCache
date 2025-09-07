@@ -89,9 +89,8 @@ class Printer:
 # ---------------- benchmark helpers -----------------------------------
 def build_chat(system_doc: str, user_prompt: str) -> List[dict]:
     return [
-        {"role": "user", "content": f"I've got a document:\n```\n{system_doc}\n```"},
-        {"role": "assistant", "content": "I've got your document."},
-        {"role": "user", "content": user_prompt},
+        {"role": "system", "content": "你是一个有用的助手。请根据提供的文档内容回答问题。"},
+        {"role": "user", "content": f"文档内容：\n{system_doc}\n\n问题：{user_prompt}"},
     ]
 
 
@@ -107,9 +106,10 @@ def ttft_stream(
         stream = client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=0.0,
+            temperature=0.0,  # 完全确定性
             stream=True,
-            max_tokens=1024,
+            max_tokens=512,   # 减少最大token数
+            stop=["\n\n", "问题：", "文档内容：", "user:", "assistant:"],  # 添加合理的停止条件
         )
     except Exception as e:
         # 如果 chat completions 失败，转换为 prompt 格式使用 completions
@@ -117,9 +117,10 @@ def ttft_stream(
         stream = client.completions.create(
             model=model,
             prompt=prompt,
-            temperature=0.0,
+            temperature=0.0,  # 完全确定性
             stream=True,
-            max_tokens=1024,
+            max_tokens=100,   # 大幅减少最大token数，避免循环
+            stop=["截图", "录制", "转码", "\n\n", "问题：", "文档内容：", "user:", "assistant:"],  # 添加更精确的停止条件
         )
     first_tok_t: float | None = None
     buf = StringIO()
@@ -127,19 +128,34 @@ def ttft_stream(
         printer.start()
 
     for chunk in stream:
-        delta = chunk.choices[0].delta
-        if delta.content:
+        # 处理Chat API和Completion API的不同响应格式
+        if hasattr(chunk.choices[0], 'delta') and chunk.choices[0].delta:
+            # Chat API格式
+            delta = chunk.choices[0].delta
+            content = delta.content if hasattr(delta, 'content') else None
+        else:
+            # Completion API格式
+            content = chunk.choices[0].text if hasattr(chunk.choices[0], 'text') else None
+        
+        if content:
             if first_tok_t is None:
                 first_tok_t = time.perf_counter()
                 if printer:
                     printer.stop()
-            print(delta.content, end="", flush=True)
-            buf.write(delta.content)
+            print(content, end="", flush=True)
+            buf.write(content)
 
     print()  # newline after streaming
     if first_tok_t is None:
         raise RuntimeError("no tokens returned")
-    return first_tok_t - start, buf.getvalue()
+    
+    # 检查回答是否太短（可能是缓存问题）
+    answer = buf.getvalue().strip()
+    if len(answer) < 10:  # 如果回答太短
+        print(f"警告: 回答太短 ({len(answer)} 字符): '{answer}'")
+        print("这可能是LMCache缓存不完整导致的")
+    
+    return first_tok_t - start, answer
 
 
 def flush_kv_cache(client: OpenAI, model: str) -> None:

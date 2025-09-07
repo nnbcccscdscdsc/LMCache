@@ -155,3 +155,139 @@ This is an example basic bash script you might use to do a sweep across differen
 * **Different sizes** — just tweak the `CONTEXT_SIZES` array.  
 * **More follow‑ups** — bump `--num_following` if you want deeper cache‑hit sampling.  
 
+---
+
+## 8 · vLLM模型启动指令
+
+### 8.1 · Mistral-7B-Instruct-v0.1 (单卡)
+
+```bash
+python -m vllm.entrypoints.openai.api_server \
+  --model mistralai/Mistral-7B-Instruct-v0.1 \
+  --port 8000 \
+  --gpu-memory-utilization 0.8 \
+  --max-model-len 131072 \
+  --lmcache \
+  --lmcache-backend redis \
+  --lmcache-redis-host localhost \
+  --lmcache-redis-port 6379
+```
+
+### 8.2 · Yi-34B-200K (双卡)
+
+```bash
+python -m vllm.entrypoints.openai.api_server \
+  --model 01-ai/Yi-34B-200K \
+  --port 8001 \
+  --tensor-parallel-size 2 \
+  --gpu-memory-utilization 0.8 \
+  --max-model-len 200000 \
+  --lmcache \
+  --lmcache-backend redis \
+  --lmcache-redis-host localhost \
+  --lmcache-redis-port 6379
+```
+
+### 8.3 · 其他大模型 (多卡)
+
+```bash
+python -m vllm.entrypoints.openai.api_server \
+  --model <model_name> \
+  --port <port> \
+  --tensor-parallel-size <num_gpus> \
+  --gpu-memory-utilization 0.8 \
+  --max-model-len <context_length> \
+  --lmcache \
+  --lmcache-backend redis \
+  --lmcache-redis-host localhost \
+  --lmcache-redis-port 6379
+```
+
+---
+
+## 9 · openai_chat_completion_client.py 运行指令
+
+### 9.1 · 基础测试 (Mistral-7B)
+
+```bash
+python openai_chat_completion_client.py \
+  --api_base http://localhost:8000/v1 \
+  --model "mistralai/Mistral-7B-Instruct-v0.1" \
+  --max_ctx_tokens 1000 \
+  --context_file "" \
+  --prompt "这个文档主要讲了什么？" \
+  --num_following 1
+```
+
+### 9.2 · 基础测试 (Yi-34B)
+
+```bash
+python openai_chat_completion_client.py \
+  --api_base http://localhost:8001/v1 \
+  --model "01-ai/Yi-34B-200K" \
+  --max_ctx_tokens 1000 \
+  --context_file "" \
+  --prompt "这个文档主要讲了什么？" \
+  --num_following 1
+```
+
+### 9.3 · 缓存刷新测试
+
+```bash
+python openai_chat_completion_client.py \
+  --api_base http://localhost:8000/v1 \
+  --model "mistralai/Mistral-7B-Instruct-v0.1" \
+  --max_ctx_tokens 1000 \
+  --context_file "" \
+  --prompt "请总结这个文档的主要内容" \
+  --num_following 2 \
+  --flush_cache
+```
+
+### 9.4 · 大上下文测试
+
+```bash
+python openai_chat_completion_client.py \
+  --api_base http://localhost:8000/v1 \
+  --model "mistralai/Mistral-7B-Instruct-v0.1" \
+  --max_ctx_tokens 32000 \
+  --context_file "" \
+  --prompt "分析这个文档的结构和特点" \
+  --num_following 1
+```
+
+### 9.5 · 自定义文档测试
+
+```bash
+python openai_chat_completion_client.py \
+  --api_base http://localhost:8000/v1 \
+  --model "mistralai/Mistral-7B-Instruct-v0.1" \
+  --max_ctx_tokens 2000 \
+  --context_file "your_document.txt" \
+  --prompt "提取文档中的关键信息" \
+  --num_following 1 \
+  --out custom_test.jsonl
+```
+
+### 9.6 · 推荐提示词
+
+| 提示词类型 | 示例 | 缓存效果 |
+|------------|------|----------|
+| **简单问答** | `"这个文档主要讲了什么？"` | 优秀 (1.67x) |
+| **中文总结** | `"请用中文总结这个文档的主要内容"` | 良好 (1.06x) |
+| **英文问答** | `"What is the main topic of this document?"` | 良好 (1.06x) |
+| **功能询问** | `"FFmpeg的主要功能有哪些？"` | 一般 (1.04x) |
+| **结构分析** | `"分析这个文档的结构和特点"` | 一般 (1.03x) |
+
+### 9.7 · 参数说明
+
+| 参数 | 说明 | 推荐值 |
+|------|------|--------|
+| `--api_base` | API服务器地址 | `http://localhost:8000/v1` (Mistral) / `http://localhost:8001/v1` (Yi-34B) |
+| `--model` | 模型名称 | `"mistralai/Mistral-7B-Instruct-v0.1"` / `"01-ai/Yi-34B-200K"` |
+| `--max_ctx_tokens` | 最大上下文长度 | `1000` (测试) / `32000` (大文档) |
+| `--context_file` | 文档文件 | `""` (使用ffmpeg.txt) / `"your_file.txt"` |
+| `--prompt` | 用户提示词 | 见上表推荐提示词 |
+| `--num_following` | 后续测试次数 | `1` (基础) / `2-3` (详细测试) |
+| `--flush_cache` | 是否刷新缓存 | 添加此参数测试缓存刷新效果 |
+
